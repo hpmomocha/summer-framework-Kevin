@@ -1,10 +1,16 @@
 package cn.com.kevin.summer.utils;
 
+import cn.com.kevin.summer.annotation.Bean;
 import cn.com.kevin.summer.annotation.Component;
 import cn.com.kevin.summer.exception.BeanDefinitionException;
+import jakarta.annotation.PostConstruct;
 
 
 import java.lang.annotation.Annotation;
+import java.lang.reflect.Method;
+import java.util.Arrays;
+import java.util.List;
+import java.util.stream.Collectors;
 
 public class ClassUtils {
     /**
@@ -76,6 +82,43 @@ public class ClassUtils {
             // default name: "HelloWorld" => "helloWorld"
             name = clazz.getSimpleName();
             name = Character.toLowerCase(name.charAt(0)) + name.substring(1);
+        }
+        return name;
+    }
+
+    public static Method findAnnotationMethod(Class<?> clazz, Class<? extends Annotation> annoClass) {
+        List<Method> methodsList = Arrays.stream(clazz.getDeclaredMethods()).filter(m -> m.isAnnotationPresent(annoClass)).map(method -> {
+                    // 被@PostConstruct, @PreDestroy注解的方法不能有参数
+                    if (method.getParameterCount() != 0) {
+                        throw new BeanDefinitionException(
+                                String.format("Method '%s' with @%s must not have argument: %s", method.getName(), annoClass.getSimpleName(), clazz.getName()));
+                    }
+                    return method;
+                }
+        ).collect(Collectors.toList());
+
+        if (methodsList.isEmpty()) {
+            return null;
+        }
+        if (methodsList.size() == 1) {
+            return methodsList.get(0);
+        }
+        throw new BeanDefinitionException(String.format("Multiple methods with @%s found in class: %s", annoClass.getSimpleName(), clazz.getName()));
+    }
+
+    /**
+     * Get bean name by:
+     *
+     * <code>
+     * @Bean
+     * Hello createHello() {}
+     * </code>
+     */
+    public static String getBeanName(Method method) {
+        Bean bean = method.getAnnotation(Bean.class);
+        String name = bean.value();
+        if (name.isEmpty()) {
+            name = method.getName();
         }
         return name;
     }

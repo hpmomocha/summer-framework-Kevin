@@ -11,7 +11,22 @@ import java.util.Objects;
 public class BeanDefinition implements Comparable<BeanDefinition> {
     // 全局唯一的Bean Name:
     private final String name;
-    // Bean的声明类型:
+    /**
+     * Bean的声明类型:
+     * 对于@Component定义的Bean，它的声明类型就是其Class本身。然而，对于用@Bean工厂方法创建的Bean，它的声明类型与实际类型不一定是同一类型。
+     *
+     * 例如下面的代码中，createDataSource()定义的Bean，声明类型是DataSource，实际类型却是某个子类，例如HikariDataSource
+     * @Configuration
+     * public class AppConfig {
+     *     @Bean(initMethod="init", destroyMethod="close")
+     *     DataSource createDataSource() {
+     *         return new HikariDataSource(...);
+     *     }
+     * }
+     *
+     * 因此要特别注意，在BeanDefinition中，存储的beanClass是声明类型，实际类型不必存储，因为可以通过instance.getClass()获得
+     */
+
     private final Class<?> beanClass;
     // Bean的实例:
     private Object instance = null;
